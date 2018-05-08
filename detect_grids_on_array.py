@@ -1,0 +1,244 @@
+import numpy as np
+import pandas as pd
+import cv2 as cv
+import numpy.linalg as la
+import math
+from matplotlib import pyplot as plt
+
+
+def load_and_convert_image_to_gray(filename):
+    """
+    :param filename: Fill path to image file to load
+    :return: img file RGB (3D array), and grayscale image (2D array)
+    """
+    img = cv.imread(filename)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    return img, gray
+
+
+def get_x_and_y_coords_for_square(array):
+    """
+    Import a value from an array and transform into a list of x and y coords
+    :param array: 2D array of square coordinates
+    :return: list of x and y coordinates to be used for plotting
+    """
+    x_vals = [array[0][0], array[1][0], array[2][0], array[3][0]]
+    y_vals = [array[0][1], array[1][1], array[2][1], array[3][1]]
+    coords = [x_vals, y_vals]
+    return coords
+
+
+def plot_all_squares(array_of_square_coords):
+    """
+    :param array_of_square_coords: array of square coordinate arrays (from find_squares function)
+    :return: Plot of all squares in 2D space
+    """
+    square_coords = []
+    for square in array_of_square_coords:
+        coords = get_x_and_y_coords_for_square(square)
+        plt.scatter(coords[0], coords[1])
+        square_coords.append(coords)
+
+
+def plot_from_dict_of_squares(dict_of_squares):
+    """
+    this is what my function does
+    :param dict_of_squares:
+    :return:
+    """
+    for square in dict_of_squares.keys():
+        coords = get_x_and_y_coords_for_square(dict_of_squares[square])
+        plt.scatter(coords[0], coords[1])
+
+
+def get_side_lengths_of_all_squares(array_of_square_coords):
+    """
+    Use this to filter squares with reasonable side lengths
+    :param array_of_square_coords: results of find_square
+    :return: dictionary of side lengths for each square(only calculating length of one side)
+    """
+    results_dict = dict()
+
+    for square, num in zip(array_of_square_coords, range(len(array_of_square_coords))):
+        x_length = square[0][0]-square[1][0]
+        y_length = square[0][1]-square[1][1]
+        side_length = la.norm([x_length, y_length])
+        results_dict[num] = side_length
+
+    return results_dict
+
+
+def make_new_dict_of_squares(squares, keys_to_keep):
+    """
+
+    :param squares:
+    :param keys_to_keep: keys of interest
+    :return:
+    """
+    clean_squares_dict = dict()
+
+    for index in keys_to_keep:
+        keep = squares[index]
+        clean_squares_dict[index] = keep
+
+    return clean_squares_dict
+
+
+def filter_squares_on_side_length(lengths_dict, max_length_filter, min_length_filter, squares):
+    """
+
+    :param lengths_dict: Dict of square keys and side lengths
+    :param max_length_filter: maximum side length to consider
+    :param min_length_filter: minimum side length to consider
+    :param squares: all squares (from find_squares)
+    :return: dict of squares only with desired side length
+    """
+
+    new_dict = dict()
+    for key in lengths_dict.keys():
+        if (lengths_dict[key] < max_length_filter) & (lengths_dict[key] > min_length_filter):
+            new_dict[key] = lengths_dict[key]
+
+    clean_squares_dict = make_new_dict_of_squares(squares, new_dict.keys())
+    return clean_squares_dict
+
+
+def get_one_x_coordinate_from_all_squares(squares_dict):
+    """
+    Use this to find overlapping squares
+    :param squares_dict:
+    :return:
+    """
+    x1_dict = dict()
+
+    for item in squares_dict.keys():
+        x1 = squares_dict[item][0][0]
+        x1_dict[item] = x1
+
+    return x1_dict
+
+
+def remove_overlapping_squares(squares_dict, max_distance):
+    """
+    ***THIS IS BUGGY*** Fix later
+    :param squares_dict: all squares (from find_squares)
+    :param max_distance: max distance to allow separation of datapoints
+    :return: list of keys to keep from squares dict
+    """
+
+    x1_dict = get_one_x_coordinate_from_all_squares(squares_dict)
+    df = pd.DataFrame.from_dict(x1_dict, orient='index')
+    df.columns = ['x1']
+
+    keeps = []
+    drops = []
+
+    for index1 in df.index:
+        if index1 in drops:
+            continue
+        else:
+            first_val = df.loc[index1, 'x1']
+            for index2 in df.index:
+                if index2 in drops:
+                    continue
+                else:
+                    second_val = df.loc[index2, 'x1']
+                    difference = abs(first_val - second_val)
+                    if (difference > 0) & (difference < max_distance):
+                        keep = index1
+                        drop = index2
+
+                        keeps.append(keep)
+                        drops.append(drop)
+
+    items_to_keep = set(keeps)
+    return items_to_keep
+
+
+def keep_selected_squares_for_extraction(items_to_keep, squares_dict, img):
+    """
+
+    :param items_to_keep: set object from remove_overlapping_squares
+    :param squares_dict:clean_squares dict after length filtering
+    :param img:Image loaded for plotting
+    :return: dictionary with squares of interest and plots on top of image
+    """
+
+    square_coords_to_extract = dict()
+
+    for item in items_to_keep:
+        square_coords_to_extract[item] = squares_dict[item]
+        to_plot = get_x_and_y_coords_for_square(squares_dict[item])
+        plt.scatter(to_plot[0],to_plot[1])
+    plt.imshow(img)
+
+    return square_coords_to_extract
+
+
+def get_vectors_from_square(one_square):
+    """
+
+    :param one_square: one square of interest, used to calculate vectors
+    :return: two vectors for the compensation to make
+    """
+
+    x_dist = one_square[0][0]-one_square[1][0]
+    y_dist = one_square[0][1]-one_square[1][1]
+    vector1 = np.array([x_dist,y_dist])
+    vector1 = vector1/la.norm(vector1)
+
+    vector2 = [vector1[1],-1*vector1[0]]
+
+    return vector1, vector2
+
+
+def rotate_coordinates_with_vectors(vector1, vector2, squares):
+
+    Q = [[vector1[0],vector1[1]],[vector2[0],vector2[1]]]
+
+    new_coords_dict = dict()
+
+    for square in squares.keys():
+
+        new_array = []
+        for item in range(4):
+            x = squares[square][item][0]
+            y = squares[square][item][1]
+            new_coord = np.dot(Q, [x, y])
+            new_array.append(new_coord)
+
+        new_coords_dict[square] = new_array
+
+    return new_coords_dict
+
+
+def extract_squares_from_gray_img(vector1, vector2, gray_img, new_coords):
+
+    Q = [[vector1[0],vector1[1]],[vector2[0],vector2[1]]]
+    Q_inv = la.inv(Q)
+
+    new_imgs = dict()
+
+    for square in new_coords.keys():
+        coords = get_x_and_y_coords_for_square(new_coords[square])
+        x = coords[0]
+        y = coords[1]
+
+        max_x = int(math.ceil(max(x)))
+        min_x = int(math.floor(min(x)))
+
+        max_y = int(math.ceil(max(y)))
+        min_y = int(math.floor(min(y)))
+
+        new_matrix = np.zeros((max_x - min_x, max_y - min_y))
+
+        for i in range(new_matrix.shape[0]):
+            for j in range(new_matrix.shape[1]):
+                old_coord = (np.dot([min_x+i, min_y+j], Q_inv))
+                new_matrix[i,j] = gray_img[int(round(old_coord[1])),int(round(old_coord[0]))]
+
+        new_imgs[square] = new_matrix
+
+    return new_imgs
+
+
