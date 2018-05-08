@@ -16,7 +16,7 @@ def load_and_convert_image_to_gray(filename):
     return img, gray
 
 
-def get_x_and_y_coords_for_square(array):
+def get_x_and_y_coords_for_plotting(array):
     """
     Import a value from an array and transform into a list of x and y coords
     :param array: 2D array of square coordinates
@@ -35,7 +35,7 @@ def plot_all_squares(array_of_square_coords):
     """
     square_coords = []
     for square in array_of_square_coords:
-        coords = get_x_and_y_coords_for_square(square)
+        coords = get_x_and_y_coords_for_plotting(square)
         plt.scatter(coords[0], coords[1])
         square_coords.append(coords)
 
@@ -47,7 +47,7 @@ def plot_from_dict_of_squares(dict_of_squares):
     :return:
     """
     for square in dict_of_squares.keys():
-        coords = get_x_and_y_coords_for_square(dict_of_squares[square])
+        coords = get_x_and_y_coords_for_plotting(dict_of_squares[square])
         plt.scatter(coords[0], coords[1])
 
 
@@ -103,48 +103,73 @@ def filter_squares_on_side_length(lengths_dict, max_length_filter, min_length_fi
     return clean_squares_dict
 
 
-def get_one_x_coordinate_from_all_squares(squares_dict):
+def get_x_and_y_coords_for_a_square(square_array):
+    """
+    For a given array, return x and y coordinates
+    :param square_array: array with coordinates of one square (from find_squares)
+    :return: x1,y1,x2,y2,x3,y3,x4,y4
+    """
+    x1 = square_array[0][0]
+    y1 = square_array[0][1]
+    x2 = square_array[1][0]
+    y2 = square_array[1][1]
+    x3 = square_array[2][0]
+    y3 = square_array[2][1]
+    x4 = square_array[3][0]
+    y4 = square_array[3][1]
+
+    return x1, y1, x2, y2, x3, y3, x4, y4
+
+
+def get_min_x_and_y_coordinate_from_all_squares(squares_dict):
     """
     Use this to find overlapping squares
     :param squares_dict:
     :return:
     """
-    x1_dict = dict()
+    x_y_dict = dict()
 
     for item in squares_dict.keys():
-        x1 = squares_dict[item][0][0]
-        x1_dict[item] = x1
+        x1, y1, x2, y2, x3, y3, x4, y4 = get_x_and_y_coords_for_a_square(squares_dict[item])
+        min_x = min(x1, x2, x3, x4)
+        min_y = min(y1, y2, y3, y4)
+        
+        x_y_dict[item] = [min_x, min_y]
 
-    return x1_dict
+    return x_y_dict
 
 
 def remove_overlapping_squares(squares_dict, max_distance):
     """
-    ***THIS IS BUGGY*** Fix later
+    removes squares that are in close proximity. Max distance from cellraft Air images is 60
     :param squares_dict: all squares (from find_squares)
     :param max_distance: max distance to allow separation of datapoints
     :return: list of keys to keep from squares dict
     """
 
-    x1_dict = get_one_x_coordinate_from_all_squares(squares_dict)
-    df = pd.DataFrame.from_dict(x1_dict, orient='index')
-    df.columns = ['x1']
+    x_y_dict = get_min_x_and_y_coordinate_from_all_squares(squares_dict)
+    df = pd.DataFrame.from_dict(x_y_dict, orient='index')
+    df.columns = ['min_x','min_y']
 
     keeps = []
     drops = []
+    differences = []
 
     for index1 in df.index:
         if index1 in drops:
             continue
         else:
-            first_val = df.loc[index1, 'x1']
+            first_x = df.loc[index1, 'min_x']
+            first_y = df.loc[index1, 'min_y']
             for index2 in df.index:
                 if index2 in drops:
                     continue
                 else:
-                    second_val = df.loc[index2, 'x1']
-                    difference = abs(first_val - second_val)
-                    if (difference > 0) & (difference < max_distance):
+                    second_x = df.loc[index2, 'min_x']
+                    second_y = df.loc[index2, 'min_y']
+                    x_diff = abs(first_x - second_x)
+                    y_diff = abs(first_y - second_y)
+                    if (x_diff < max_distance) & (y_diff < max_distance):
                         keep = index1
                         drop = index2
 
