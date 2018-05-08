@@ -1,8 +1,6 @@
-import numpy as np
 import pandas as pd
 import cv2 as cv
 import numpy.linalg as la
-import math
 from matplotlib import pyplot as plt
 
 
@@ -149,11 +147,10 @@ def remove_overlapping_squares(squares_dict, max_distance):
 
     x_y_dict = get_min_x_and_y_coordinate_from_all_squares(squares_dict)
     df = pd.DataFrame.from_dict(x_y_dict, orient='index')
-    df.columns = ['min_x','min_y']
+    df.columns = ['min_x', 'min_y']
 
     keeps = []
     drops = []
-    differences = []
 
     for index1 in df.index:
         if index1 in drops:
@@ -193,77 +190,9 @@ def keep_selected_squares_for_extraction(items_to_keep, squares_dict, img):
 
     for item in items_to_keep:
         square_coords_to_extract[item] = squares_dict[item]
-        to_plot = get_x_and_y_coords_for_square(squares_dict[item])
-        plt.scatter(to_plot[0],to_plot[1])
+        to_plot = get_x_and_y_coords_for_plotting(squares_dict[item])
+        plt.scatter(to_plot[0], to_plot[1])
     plt.imshow(img)
 
     return square_coords_to_extract
-
-
-def get_vectors_from_square(one_square):
-    """
-
-    :param one_square: one square of interest, used to calculate vectors
-    :return: two vectors for the compensation to make
-    """
-
-    x_dist = one_square[0][0]-one_square[1][0]
-    y_dist = one_square[0][1]-one_square[1][1]
-    vector1 = np.array([x_dist,y_dist])
-    vector1 = vector1/la.norm(vector1)
-
-    vector2 = [vector1[1],-1*vector1[0]]
-
-    return vector1, vector2
-
-
-def rotate_coordinates_with_vectors(vector1, vector2, squares):
-
-    Q = [[vector1[0],vector1[1]],[vector2[0],vector2[1]]]
-
-    new_coords_dict = dict()
-
-    for square in squares.keys():
-
-        new_array = []
-        for item in range(4):
-            x = squares[square][item][0]
-            y = squares[square][item][1]
-            new_coord = np.dot(Q, [x, y])
-            new_array.append(new_coord)
-
-        new_coords_dict[square] = new_array
-
-    return new_coords_dict
-
-
-def extract_squares_from_gray_img(vector1, vector2, gray_img, new_coords):
-
-    Q = [[vector1[0],vector1[1]],[vector2[0],vector2[1]]]
-    Q_inv = la.inv(Q)
-
-    new_imgs = dict()
-
-    for square in new_coords.keys():
-        coords = get_x_and_y_coords_for_square(new_coords[square])
-        x = coords[0]
-        y = coords[1]
-
-        max_x = int(math.ceil(max(x)))
-        min_x = int(math.floor(min(x)))
-
-        max_y = int(math.ceil(max(y)))
-        min_y = int(math.floor(min(y)))
-
-        new_matrix = np.zeros((max_x - min_x, max_y - min_y))
-
-        for i in range(new_matrix.shape[0]):
-            for j in range(new_matrix.shape[1]):
-                old_coord = (np.dot([min_x+i, min_y+j], Q_inv))
-                new_matrix[i,j] = gray_img[int(round(old_coord[1])),int(round(old_coord[0]))]
-
-        new_imgs[square] = new_matrix
-
-    return new_imgs
-
 
