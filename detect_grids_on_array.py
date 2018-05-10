@@ -1,7 +1,9 @@
 import pandas as pd
+import find_squares
 import cv2 as cv
 import numpy.linalg as la
 from matplotlib import pyplot as plt
+import os
 
 
 def load_and_convert_image_to_gray(filename):
@@ -196,3 +198,151 @@ def keep_selected_squares_for_extraction(items_to_keep, squares_dict, img):
 
     return square_coords_to_extract
 
+
+def make_df_with_square_coords(squares_dict):
+    """
+
+    :param squares_dict:dictionary of squares
+    :return:dataframe with min_x and min_y information
+    """
+    test_df = pd.DataFrame(index=squares_dict.keys())
+    for square in test_df.index:
+        to_plot = get_x_and_y_coords_for_plotting(squares_dict[square])
+        test_df.ix[square, 'min_x'] = min(to_plot[0])
+        test_df.ix[square, 'min_y'] = min(to_plot[1])
+    sorted_df = test_df.sort_values(by=['min_x', 'min_y'])
+    return sorted_df
+
+
+def assign_x_in_same_rows(sorted_df):
+    """
+
+    :param sorted_df: dataframe sorted on min_x values
+    :return: dataframe assigning squares in the same x row
+    """
+    df = sorted_df.reset_index()
+
+    x_assignments = []
+    group = 0
+    min_x = df.ix[0, 'min_x']
+    for row in sorted_df.iterrows():
+        x = row[1]['min_x']
+        diff_x = abs(min_x-x)
+        if diff_x < 20:
+            x_assignments.append(group)
+
+        else:
+            group = group + 1
+            x_assignments.append(group)
+
+        min_x = x
+
+    df['x_groups'] = x_assignments
+    return df.sort_values(by=['x_groups', 'min_y'])
+
+
+def assign_y_in_same_columns(df):
+    """
+
+    :param df: result of assign_x_in_same_rows
+    :return:dataframe with squares assigned to columns
+    """
+    df = df.sort_values(by='min_y').reset_index(drop=True)
+
+    y_assignments = []
+    group = 0
+    min_y = df.ix[0, 'min_y']
+    for row in df.iterrows():
+        y = row[1]['min_y']
+        diff_y = abs(min_y-y)
+        if diff_y < 20:
+            y_assignments.append(group)
+        else:
+            group = group + 1
+            y_assignments.append(group)
+
+        min_y = y
+
+    df['y_groups'] = y_assignments
+    return df
+
+
+def assign_well_id(df, filename):
+    """
+
+    :param df: result of assign_y_in_same_columns
+    :param filename: name of input file from CellRaftAir
+    :return: dataframe with wellID assignment
+    """
+    name = os.path.basename(filename).strip("F.tiff")
+    print(name)
+    row_id = name[0]
+    col_id = name[2]
+
+    for row in df.iterrows():
+        row_num = int(name[1])
+        col_num = int(name[3])
+
+        row_num = row[1]['y_groups'] + row_num
+        col_num = row[1]['x_groups'] + col_num
+        new_name = "{}{}{}{}".format(row_id, str(int(row_num)), col_id, str(int(col_num)))
+        df.ix[row[0], 'well_id'] = new_name
+        if (row_num > 9) | (col_num > 9):
+            print("Start crying now")
+
+    return df
+
+
+def rename_dict_with_wellid(squares_dict, df_with_well_id):
+    """
+
+    :param squares_dict: dictionary of squares
+    :param df_with_well_id: dataframe with wellID from assign_well_id
+    :return:
+    """
+    reassignment_dict = dict(zip(df_with_well_id['index'], df_with_well_id['well_id']))
+    reassigned = dict((reassignment_dict[key], value) for (key, value) in squares_dict.items())
+    return reassigned
+
+
+def master_one_img_gridscan(filename):
+    """
+
+    :param filename:name of inputfile from CellRaftAir
+    :return: final_squares, img, grey, red_img, blue_img
+    """
+    img, grey = load_and_convert_image_to_gray(filename)
+    squares = find_squares.find_squares(img)
+    lengths = get_side_lengths_of_all_squares(squares)
+    new_squares = filter_squares_on_side_length(lengths, 400, 325, squares)
+    final_keys = remove_overlapping_squares(new_squares, 60)
+    red_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
+    blue_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
+    final_squares = make_new_dict_of_squares(new_squares, final_keys)
+    return final_squares, img, grey, red_img, blue_img
+
+
+def reassign_squares_on_barcode(squares, filename):
+    """
+
+    :param squares: dictionary of squares
+    :param filename: filename from CellRaft Air
+    :return: dataframe with well assignments
+    """
+    sorted_df = make_df_with_square_coords(squares)
+    df_new = assign_x_in_same_rows(sorted_df)
+    df = assign_y_in_same_columns(df_new)
+    final = assign_well_id(df, filename)
+    return final
+
+
+def master_all(filename):
+    """
+
+    :param filename: Brightfield F file from CellRaftAir to analyze
+    :return: dictionary of squares with the assigned coordinate, brightfield, grey, red, and blue images
+    """
+    final_squares, img, grey, red_img, blue_img = master_one_img_gridscan(filename)
+    df = reassign_squares_on_barcode(final_squares, filename)
+    squares = rename_dict_with_wellid(final_squares, df)
+    return squares, img, grey, red_img, blue_img
