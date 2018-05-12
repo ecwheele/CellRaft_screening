@@ -84,15 +84,25 @@ def make_new_dict_of_squares(squares, keys_to_keep):
     return clean_squares_dict
 
 
-def filter_squares_on_side_length(lengths_dict, max_length_filter, min_length_filter, squares):
+def filter_squares_on_side_length(lengths_dict, array_type, squares):
     """
 
     :param lengths_dict: Dict of square keys and side lengths
-    :param max_length_filter: maximum side length to consider
-    :param min_length_filter: minimum side length to consider
+    :param array_type: Air_100 or Air_200
     :param squares: all squares (from find_squares)
     :return: dict of squares only with desired side length
     """
+
+    if array_type == "Air_100":
+        max_length_filter = 200
+        min_length_filter = 150
+
+    elif array_type == "Air_200":
+        max_length_filter = 400
+        min_length_filter = 325
+
+    else:
+        print("Array type not supported, yell at Emily now")
 
     new_dict = dict()
     for key in lengths_dict.keys():
@@ -141,7 +151,8 @@ def get_min_x_and_y_coordinate_from_all_squares(squares_dict):
 
 def remove_overlapping_squares(squares_dict, max_distance):
     """
-    removes squares that are in close proximity. Max distance from cellraft Air images is 60
+    removes squares that are in close proximity. Max distance from 200um cellraft Air images is 60.
+    max distance from 100um cellraft Air images is 20
     :param squares_dict: all squares (from find_squares)
     :param max_distance: max distance to allow separation of datapoints
     :return: list of keys to keep from squares dict
@@ -179,26 +190,6 @@ def remove_overlapping_squares(squares_dict, max_distance):
     return items_to_keep
 
 
-def keep_selected_squares_for_extraction(items_to_keep, squares_dict, img):
-    """
-
-    :param items_to_keep: set object from remove_overlapping_squares
-    :param squares_dict:clean_squares dict after length filtering
-    :param img:Image loaded for plotting
-    :return: dictionary with squares of interest and plots on top of image
-    """
-
-    square_coords_to_extract = dict()
-
-    for item in items_to_keep:
-        square_coords_to_extract[item] = squares_dict[item]
-        to_plot = get_x_and_y_coords_for_plotting(squares_dict[item])
-        plt.scatter(to_plot[0], to_plot[1])
-    plt.imshow(img)
-
-    return square_coords_to_extract
-
-
 def make_df_with_square_coords(squares_dict):
     """
 
@@ -228,7 +219,7 @@ def assign_x_in_same_rows(sorted_df):
     for row in sorted_df.iterrows():
         x = row[1]['min_x']
         diff_x = abs(min_x-x)
-        if diff_x < 20:
+        if diff_x < 40:
             x_assignments.append(group)
 
         else:
@@ -255,7 +246,7 @@ def assign_y_in_same_columns(df):
     for row in df.iterrows():
         y = row[1]['min_y']
         diff_y = abs(min_y-y)
-        if diff_y < 20:
+        if diff_y < 40:
             y_assignments.append(group)
         else:
             group = group + 1
@@ -271,24 +262,31 @@ def assign_well_id(df, filename):
     """
 
     :param df: result of assign_y_in_same_columns
-    :param filename: name of input file from CellRaftAir
-    :return: dataframe with wellID assignment
+    :param filename:brightfield filename from CellRaft Air
+    :return:dataframe with wellID in a new column
     """
-    name = os.path.basename(filename).strip("F.tiff")
-    print(name)
-    row_id = name[0]
-    col_id = name[2]
+    name = os.path.basename(filename).rstrip("F.tiff")
 
     for row in df.iterrows():
+        row_id = name[0]
+        col_id = name[2]
         row_num = int(name[1])
         col_num = int(name[3])
 
         row_num = row[1]['y_groups'] + row_num
         col_num = row[1]['x_groups'] + col_num
+        if row_num > 9:
+            row_id = chr(ord(row_id)+1)
+            row_num = str(row_num)[1]
+        if col_num > 9:
+            col_id = chr(ord(col_id)+1)
+            col_num = str(col_num)[1]
+
         new_name = "{}{}{}{}".format(row_id, str(int(row_num)), col_id, str(int(col_num)))
         df.ix[row[0], 'well_id'] = new_name
-        if (row_num > 9) | (col_num > 9):
-            print("Start crying now")
+
+        if (int(row_num) > 9) | (int(col_num) > 9):
+            print("Keep Crying")
 
     return df
 
@@ -305,17 +303,24 @@ def rename_dict_with_wellid(squares_dict, df_with_well_id):
     return reassigned
 
 
-def master_one_img_gridscan(filename):
+def master_one_img_gridscan(filename, array_type):
     """
 
     :param filename:name of inputfile from CellRaftAir
+    :param array_type:Air_100 or Air_200
     :return: final_squares, img, grey, red_img, blue_img
     """
+
+    if array_type == "Air_100":
+        distance_filt = 20
+    if array_type == "Air_200":
+        distance_filt = 60
+
     img, grey = load_and_convert_image_to_gray(filename)
     squares = find_squares.find_squares(img)
     lengths = get_side_lengths_of_all_squares(squares)
-    new_squares = filter_squares_on_side_length(lengths, 400, 325, squares)
-    final_keys = remove_overlapping_squares(new_squares, 60)
+    new_squares = filter_squares_on_side_length(lengths, array_type, squares)
+    final_keys = remove_overlapping_squares(new_squares, distance_filt)
     red_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
     blue_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
     final_squares = make_new_dict_of_squares(new_squares, final_keys)
@@ -336,13 +341,14 @@ def reassign_squares_on_barcode(squares, filename):
     return final
 
 
-def master_all(filename):
+def master_all(filename, array_type):
     """
 
     :param filename: Brightfield F file from CellRaftAir to analyze
+    :param array_type:Air_100 or Air_200
     :return: dictionary of squares with the assigned coordinate, brightfield, grey, red, and blue images
     """
-    final_squares, img, grey, red_img, blue_img = master_one_img_gridscan(filename)
+    final_squares, img, grey, red_img, blue_img = master_one_img_gridscan(filename, array_type)
     df = reassign_squares_on_barcode(final_squares, filename)
     squares = rename_dict_with_wellid(final_squares, df)
     return squares, img, grey, red_img, blue_img
