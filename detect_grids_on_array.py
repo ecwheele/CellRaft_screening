@@ -84,7 +84,8 @@ def make_new_dict_of_squares(squares, keys_to_keep):
     return clean_squares_dict
 
 
-def filter_squares_on_side_length(lengths_dict, array_type, squares):
+def filter_squares_on_side_length(lengths_dict, squares, array_type=None,  
+                                 max_length_filter=None, min_length_filter=None):
     """
 
     :param lengths_dict: Dict of square keys and side lengths
@@ -101,8 +102,13 @@ def filter_squares_on_side_length(lengths_dict, array_type, squares):
         max_length_filter = 400
         min_length_filter = 325
 
-    else:
-        print("Array type not supported, yell at Emily now")
+    elif array_type == "keyence_10x":
+        max_length_filter = 118
+        min_length_filter = 50
+
+    elif array_type == None:
+        max_length_filter = max_length_filter
+        min_length_filter = min_length_filter
 
     new_dict = dict()
     for key in lengths_dict.keys():
@@ -148,6 +154,18 @@ def get_min_x_and_y_coordinate_from_all_squares(squares_dict):
 
     return x_y_dict
 
+def make_df_with_minx_miny(squares_dict):
+    """
+    Makes a df with 2 columns, min_x and min_y
+    :param squares_dict:
+    :return:
+    """
+    x_y_dict = get_min_x_and_y_coordinate_from_all_squares(squares_dict)
+    df = pd.DataFrame.from_dict(x_y_dict, orient='index')
+    df.columns = ['min_x', 'min_y']
+    return df
+
+
 
 def remove_overlapping_squares(squares_dict, max_distance):
     """
@@ -158,9 +176,7 @@ def remove_overlapping_squares(squares_dict, max_distance):
     :return: list of keys to keep from squares dict
     """
 
-    x_y_dict = get_min_x_and_y_coordinate_from_all_squares(squares_dict)
-    df = pd.DataFrame.from_dict(x_y_dict, orient='index')
-    df.columns = ['min_x', 'min_y']
+    df = make_df_with_minx_miny(squares_dict)
 
     keeps = []
     drops = []
@@ -188,6 +204,20 @@ def remove_overlapping_squares(squares_dict, max_distance):
 
     items_to_keep = set(keeps)
     return items_to_keep
+
+
+def remove_overlapping_squares_v2(squares_dict):
+    """
+    removes squares with min_x and min_y that are both within 40 pixels of each other
+    :param squares_dict:
+    :return:
+    """
+    df = make_df_with_minx_miny(squares_dict)
+    new = df.drop_duplicates(subset=['min_x', 'min_y'])
+    x_values = assign_x_in_same_rows(new.sort_values('min_x'))
+    y_values = assign_y_in_same_columns(x_values)
+    keys_to_keep = list(y_values.drop_duplicates(subset=['x_groups', 'y_groups'])['index'])
+    return keys_to_keep
 
 
 def make_df_with_square_coords(squares_dict):
@@ -303,7 +333,21 @@ def rename_dict_with_wellid(squares_dict, df_with_well_id):
     return reassigned
 
 
-def master_one_img_gridscan(filename, array_type):
+def extract_array_from_image(square, image):
+    x_and_y = get_x_and_y_coords_for_plotting(square)
+
+    min_x = min(x_and_y[0])
+    max_x = max(x_and_y[0])
+    min_y = min(x_and_y[1])
+    max_y = max(x_and_y[1])
+    
+    img_array = image[min_y:max_y, min_x:max_x]
+    
+    return img_array
+
+
+def master_one_img_gridscan(filename, array_type=None, max_length_filter=None, 
+                            min_length_filter=None, distance_filt=None):
     """
 
     :param filename:name of inputfile from CellRaftAir
@@ -315,12 +359,19 @@ def master_one_img_gridscan(filename, array_type):
         distance_filt = 20
     if array_type == "Air_200":
         distance_filt = 60
+    if array_type == "keyence_10x":
+        distance_filt = 20
 
     img, grey = load_and_convert_image_to_gray(filename)
     squares = find_squares.find_squares(img)
     lengths = get_side_lengths_of_all_squares(squares)
-    new_squares = filter_squares_on_side_length(lengths, array_type, squares)
-    final_keys = remove_overlapping_squares(new_squares, distance_filt)
+    new_squares = filter_squares_on_side_length(lengths, squares, array_type=array_type,  
+                                                max_length_filter=max_length_filter, 
+                                                min_length_filter=min_length_filter)
+#    if array_type == "keyence_10x":
+    final_keys = remove_overlapping_squares_v2(new_squares)
+#    else:
+#       final_keys = remove_overlapping_squares(new_squares, distance_filt)
     red_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
     blue_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
     final_squares = make_new_dict_of_squares(new_squares, final_keys)
