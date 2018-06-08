@@ -31,7 +31,7 @@ def get_wellid(df):
 def calculate_sg_dapi_area(df):
     order = ['Nuc_area', 'SG_area', 'SG/DAPI_area', 'Count_Nuclei', 'Count_Stress_granules',
        'wellid','FileName_DAPI']
-    df['SG/DAPI_area'] = zoom2['SG_area']/zoom2['Nuc_area']
+    df['SG/DAPI_area'] = df['SG_area']/df['Nuc_area']
     df = df[order]
     return df.sort_values(by="SG/DAPI_area")
 
