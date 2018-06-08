@@ -104,7 +104,7 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
 
     elif array_type == "keyence_10x":
         max_length_filter = 118
-        min_length_filter = 50
+        min_length_filter = 80
 
     elif array_type == None:
         max_length_filter = max_length_filter
