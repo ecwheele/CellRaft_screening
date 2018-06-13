@@ -18,7 +18,7 @@ to_drop = ['AreaOccupied_Perimeter_Nuclei','AreaOccupied_Perimeter_Stress_granul
            'URL_cellbody']
 
 
-old = ['AreaOccupied_AreaOccupied_Nuclei','AreaOccupied_AreaOccupied_Stress_granules']
+old = ['AreaOccupied_AreaOccupied_MaskedNuclei','AreaOccupied_AreaOccupied_MaskedSGs']
 new = ['Nuc_area','SG_area']
 rename_dict = dict(zip(old,new))
 
@@ -29,7 +29,7 @@ def get_wellid(df):
 
 
 def calculate_sg_dapi_area(df):
-    order = ['Nuc_area', 'SG_area', 'SG/DAPI_area', 'Count_Nuclei', 'Count_Stress_granules',
+    order = ['Nuc_area', 'SG_area', 'SG/DAPI_area', 'Count_MaskedNuclei', 'Count_MaskedSGs',
        'wellid','FileName_DAPI']
     df['SG/DAPI_area'] = df['SG_area']/df['Nuc_area']
     df = df[order]

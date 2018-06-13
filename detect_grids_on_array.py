@@ -1,4 +1,6 @@
 import pandas as pd
+import process_grids as pg
+import general as gen
 import find_squares
 import cv2 as cv
 import numpy.linalg as la
@@ -16,41 +18,6 @@ def load_and_convert_image_to_gray(filename):
     return img, gray
 
 
-def get_x_and_y_coords_for_plotting(array):
-    """
-    Import a value from an array and transform into a list of x and y coords
-    :param array: 2D array of square coordinates
-    :return: list of x and y coordinates to be used for plotting
-    """
-    x_vals = [array[0][0], array[1][0], array[2][0], array[3][0]]
-    y_vals = [array[0][1], array[1][1], array[2][1], array[3][1]]
-    coords = [x_vals, y_vals]
-    return coords
-
-
-def plot_all_squares(array_of_square_coords):
-    """
-    :param array_of_square_coords: array of square coordinate arrays (from find_squares function)
-    :return: Plot of all squares in 2D space
-    """
-    square_coords = []
-    for square in array_of_square_coords:
-        coords = get_x_and_y_coords_for_plotting(square)
-        plt.scatter(coords[0], coords[1])
-        square_coords.append(coords)
-
-
-def plot_from_dict_of_squares(dict_of_squares):
-    """
-    this is what my function does
-    :param dict_of_squares:
-    :return:
-    """
-    for square in dict_of_squares.keys():
-        coords = get_x_and_y_coords_for_plotting(dict_of_squares[square])
-        plt.scatter(coords[0], coords[1])
-
-
 def get_side_lengths_of_all_squares(array_of_square_coords):
     """
     Use this to filter squares with reasonable side lengths
@@ -66,22 +33,6 @@ def get_side_lengths_of_all_squares(array_of_square_coords):
         results_dict[num] = side_length
 
     return results_dict
-
-
-def make_new_dict_of_squares(squares, keys_to_keep):
-    """
-
-    :param squares:
-    :param keys_to_keep: keys of interest
-    :return:
-    """
-    clean_squares_dict = dict()
-
-    for index in keys_to_keep:
-        keep = squares[index]
-        clean_squares_dict[index] = keep
-
-    return clean_squares_dict
 
 
 def filter_squares_on_side_length(lengths_dict, squares, array_type=None,  
@@ -106,7 +57,7 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
         max_length_filter = 118
         min_length_filter = 80
 
-    elif array_type == None:
+    elif array_type is None:
         max_length_filter = max_length_filter
         min_length_filter = min_length_filter
 
@@ -119,120 +70,56 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
     return clean_squares_dict
 
 
-def get_x_and_y_coords_for_a_square(square_array):
-    """
-    For a given array, return x and y coordinates
-    :param square_array: array with coordinates of one square (from find_squares)
-    :return: x1,y1,x2,y2,x3,y3,x4,y4
-    """
-    x1 = square_array[0][0]
-    y1 = square_array[0][1]
-    x2 = square_array[1][0]
-    y2 = square_array[1][1]
-    x3 = square_array[2][0]
-    y3 = square_array[2][1]
-    x4 = square_array[3][0]
-    y4 = square_array[3][1]
-
-    return x1, y1, x2, y2, x3, y3, x4, y4
-
-
-def get_min_x_and_y_coordinate_from_all_squares(squares_dict):
-    """
-    Use this to find overlapping squares
-    :param squares_dict:
-    :return:
-    """
-    x_y_dict = dict()
-
-    for item in squares_dict.keys():
-        x1, y1, x2, y2, x3, y3, x4, y4 = get_x_and_y_coords_for_a_square(squares_dict[item])
-        min_x = min(x1, x2, x3, x4)
-        min_y = min(y1, y2, y3, y4)
-        
-        x_y_dict[item] = [min_x, min_y]
-
-    return x_y_dict
-
 def make_df_with_minx_miny(squares_dict):
     """
     Makes a df with 2 columns, min_x and min_y
     :param squares_dict:
     :return:
     """
-    x_y_dict = get_min_x_and_y_coordinate_from_all_squares(squares_dict)
+    x_y_dict = gen.get_min_x_and_y_coordinate_from_all_squares(squares_dict)
     df = pd.DataFrame.from_dict(x_y_dict, orient='index')
     df.columns = ['min_x', 'min_y']
+    df.sort_values(by=['min_x', 'min_y'], inplace=True)
     return df
 
 
+def make_uniform_squares(df, array_type):
+    if array_type == "Air_100":
+        x_length = 180
+        y_length = 180
 
-def remove_overlapping_squares(squares_dict, max_distance):
-    """
-    removes squares that are in close proximity. Max distance from 200um cellraft Air images is 60.
-    max distance from 100um cellraft Air images is 20
-    :param squares_dict: all squares (from find_squares)
-    :param max_distance: max distance to allow separation of datapoints
-    :return: list of keys to keep from squares dict
-    """
+    else:
+        print("Array type not supported")
 
-    df = make_df_with_minx_miny(squares_dict)
+    averages = df.groupby(by=['x_groups','y_groups']).mean().astype(int)
+    df = pd.DataFrame(averages).drop(['index'], axis=1).reset_index()
 
-    keeps = []
-    drops = []
+    new_dict = dict()
 
-    for index1 in df.index:
-        if index1 in drops:
-            continue
-        else:
-            first_x = df.loc[index1, 'min_x']
-            first_y = df.loc[index1, 'min_y']
-            for index2 in df.index:
-                if index2 in drops:
-                    continue
-                else:
-                    second_x = df.loc[index2, 'min_x']
-                    second_y = df.loc[index2, 'min_y']
-                    x_diff = abs(first_x - second_x)
-                    y_diff = abs(first_y - second_y)
-                    if (x_diff < max_distance) & (y_diff < max_distance):
-                        keep = index1
-                        drop = index2
+    count = 0
+    for row in df.iterrows():
+        count = count+1
+        square = pg.make_square(row[1]['min_x'], row[1]['min_y'],
+                      x_length, y_length)
+        new_dict[count] = square
 
-                        keeps.append(keep)
-                        drops.append(drop)
-
-    items_to_keep = set(keeps)
-    return items_to_keep
+    return new_dict
 
 
-def remove_overlapping_squares_v2(squares_dict):
+def remove_overlapping_squares_v2(squares_dict, array_type):
     """
     removes squares with min_x and min_y that are both within 40 pixels of each other
-    :param squares_dict:
-    :return:
+    :param squares_dict: dict with overlapping squares
+    :param array_type: "Air_100" is the only one currently supported
+    :return: dict of squares and dataframe with x and y col/row assignments
     """
     df = make_df_with_minx_miny(squares_dict)
     new = df.drop_duplicates(subset=['min_x', 'min_y'])
     x_values = assign_x_in_same_rows(new.sort_values('min_x'))
     y_values = assign_y_in_same_columns(x_values)
-    keys_to_keep = list(y_values.drop_duplicates(subset=['x_groups', 'y_groups'])['index'])
-    return keys_to_keep
+    squares, df = make_uniform_squares(y_values.sort_values(by=['x_groups','y_groups']), array_type=array_type)
 
-
-def make_df_with_square_coords(squares_dict):
-    """
-
-    :param squares_dict:dictionary of squares
-    :return:dataframe with min_x and min_y information
-    """
-    test_df = pd.DataFrame(index=squares_dict.keys())
-    for square in test_df.index:
-        to_plot = get_x_and_y_coords_for_plotting(squares_dict[square])
-        test_df.ix[square, 'min_x'] = min(to_plot[0])
-        test_df.ix[square, 'min_y'] = min(to_plot[1])
-    sorted_df = test_df.sort_values(by=['min_x', 'min_y'])
-    return sorted_df
+    return squares, df
 
 
 def assign_x_in_same_rows(sorted_df):
@@ -333,8 +220,10 @@ def rename_dict_with_wellid(squares_dict, df_with_well_id):
     return reassigned
 
 
+
+
 def extract_array_from_image(square, image):
-    x_and_y = get_x_and_y_coords_for_plotting(square)
+    x_and_y = gen.get_x_and_y_coords(square)
 
     min_x = min(x_and_y[0])
     max_x = max(x_and_y[0])
@@ -369,7 +258,7 @@ def master_one_img_gridscan(filename, array_type=None, max_length_filter=None,
                                                 max_length_filter=max_length_filter, 
                                                 min_length_filter=min_length_filter)
 #    if array_type == "keyence_10x":
-    final_keys = remove_overlapping_squares_v2(new_squares)
+    final_squares = remove_overlapping_squares_v2(new_squares)
 #    else:
 #       final_keys = remove_overlapping_squares(new_squares, distance_filt)
     red_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
@@ -385,7 +274,7 @@ def reassign_squares_on_barcode(squares, filename):
     :param filename: filename from CellRaft Air
     :return: dataframe with well assignments
     """
-    sorted_df = make_df_with_square_coords(squares)
+    sorted_df = gen.make_df_with_square_coords(squares)
     df_new = assign_x_in_same_rows(sorted_df)
     df = assign_y_in_same_columns(df_new)
     final = assign_well_id(df, filename)
