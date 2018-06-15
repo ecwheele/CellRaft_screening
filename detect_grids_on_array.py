@@ -1,9 +1,9 @@
 import pandas as pd
-import process_grids as pg
+import numpy as np
 import general as gen
+from numpy import linalg as la
 import find_squares
 import cv2 as cv
-import numpy.linalg as la
 from matplotlib import pyplot as plt
 import os
 
@@ -36,7 +36,7 @@ def get_side_lengths_of_all_squares(array_of_square_coords):
 
 
 def filter_squares_on_side_length(lengths_dict, squares, array_type=None,  
-                                 max_length_filter=None, min_length_filter=None):
+                                  max_length_filter=None, min_length_filter=None):
     """
 
     :param lengths_dict: Dict of square keys and side lengths
@@ -66,7 +66,7 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
         if (lengths_dict[key] < max_length_filter) & (lengths_dict[key] > min_length_filter):
             new_dict[key] = lengths_dict[key]
 
-    clean_squares_dict = make_new_dict_of_squares(squares, new_dict.keys())
+    clean_squares_dict = gen.make_new_dict_of_squares(squares, new_dict.keys())
     return clean_squares_dict
 
 
@@ -91,19 +91,19 @@ def make_uniform_squares(df, array_type):
     else:
         print("Array type not supported")
 
-    averages = df.groupby(by=['x_groups','y_groups']).mean().astype(int)
+    averages = df.groupby(by=['x_groups', 'y_groups']).mean().astype(int)
     df = pd.DataFrame(averages).drop(['index'], axis=1).reset_index()
 
     new_dict = dict()
 
-    count = 0
+    count = -1
     for row in df.iterrows():
         count = count+1
-        square = pg.make_square(row[1]['min_x'], row[1]['min_y'],
-                      x_length, y_length)
+        square = gen.make_square(row[1]['min_x'], row[1]['min_y'],
+                                 x_length, y_length)
         new_dict[count] = square
 
-    return new_dict
+    return new_dict, df
 
 
 def remove_overlapping_squares_v2(squares_dict, array_type):
@@ -117,7 +117,7 @@ def remove_overlapping_squares_v2(squares_dict, array_type):
     new = df.drop_duplicates(subset=['min_x', 'min_y'])
     x_values = assign_x_in_same_rows(new.sort_values('min_x'))
     y_values = assign_y_in_same_columns(x_values)
-    squares, df = make_uniform_squares(y_values.sort_values(by=['x_groups','y_groups']), array_type=array_type)
+    squares, df = make_uniform_squares(y_values.sort_values(by=['x_groups', 'y_groups']), array_type=array_type)
 
     return squares, df
 
@@ -215,11 +215,9 @@ def rename_dict_with_wellid(squares_dict, df_with_well_id):
     :param df_with_well_id: dataframe with wellID from assign_well_id
     :return:
     """
-    reassignment_dict = dict(zip(df_with_well_id['index'], df_with_well_id['well_id']))
+    reassignment_dict = dict(zip(df_with_well_id.index, df_with_well_id['well_id']))
     reassigned = dict((reassignment_dict[key], value) for (key, value) in squares_dict.items())
     return reassigned
-
-
 
 
 def extract_array_from_image(square, image):
@@ -236,7 +234,7 @@ def extract_array_from_image(square, image):
 
 
 def master_one_img_gridscan(filename, array_type=None, max_length_filter=None, 
-                            min_length_filter=None, distance_filt=None):
+                            min_length_filter=None):
     """
 
     :param filename:name of inputfile from CellRaftAir
@@ -244,51 +242,121 @@ def master_one_img_gridscan(filename, array_type=None, max_length_filter=None,
     :return: final_squares, img, grey, red_img, blue_img
     """
 
-    if array_type == "Air_100":
-        distance_filt = 20
-    if array_type == "Air_200":
-        distance_filt = 60
-    if array_type == "keyence_10x":
-        distance_filt = 20
+    # if array_type == "Air_100":
+    #     distance_filt = 20
+    # if array_type == "Air_200":
+    #     distance_filt = 60
+    # if array_type == "keyence_10x":
+    #     distance_filt = 20
 
     img, grey = load_and_convert_image_to_gray(filename)
     squares = find_squares.find_squares(img)
     lengths = get_side_lengths_of_all_squares(squares)
     new_squares = filter_squares_on_side_length(lengths, squares, array_type=array_type,  
-                                                max_length_filter=max_length_filter, 
-                                                min_length_filter=min_length_filter)
-#    if array_type == "keyence_10x":
-    final_squares = remove_overlapping_squares_v2(new_squares)
-#    else:
-#       final_keys = remove_overlapping_squares(new_squares, distance_filt)
-    red_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
-    blue_img, gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
-    final_squares = make_new_dict_of_squares(new_squares, final_keys)
-    return final_squares, img, grey, red_img, blue_img
+                                                max_length_filter = max_length_filter,
+                                                min_length_filter = min_length_filter)
+
+    final_squares, df = remove_overlapping_squares_v2(new_squares, array_type)
+
+    assigned = assign_well_id(df, filename)
+    named_squares = rename_dict_with_wellid(final_squares, assigned)
+
+    red_img, red_gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
+    blue_img, blue_gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
+
+    return named_squares, img, grey, red_img, blue_img, df
 
 
-def reassign_squares_on_barcode(squares, filename):
+def extract_info_from_named_squares(named_squares, red_img, blue_img,
+                                    blue_dict, red_dict, array_type):
     """
 
-    :param squares: dictionary of squares
-    :param filename: filename from CellRaft Air
-    :return: dataframe with well assignments
-    """
-    sorted_df = gen.make_df_with_square_coords(squares)
-    df_new = assign_x_in_same_rows(sorted_df)
-    df = assign_y_in_same_columns(df_new)
-    final = assign_well_id(df, filename)
-    return final
-
-
-def master_all(filename, array_type):
+    :param named_squares: result of master_one_img_gridscan
+    :param red_img: result of master_one_img_gridscan
+    :param blue_img: result of master_one_img_gridscan
+    :param blue_dict: dictionary to store blue squares
+    :param red_dict: dictionary to store red squares
+    :param array_type: "Air_100 only supported"
+    :return: appends squares that are shrunken into the blue and red dictionaries.
     """
 
-    :param filename: Brightfield F file from CellRaftAir to analyze
-    :param array_type:Air_100 or Air_200
-    :return: dictionary of squares with the assigned coordinate, brightfield, grey, red, and blue images
+    if array_type == "Air_100":
+        expansion_distance = -25
+
+    for square in named_squares.keys():
+
+        shrunk = gen.expand_square(named_squares[square], expansion_distance)
+        blue = extract_array_from_image(shrunk, blue_img)
+        red = extract_array_from_image(shrunk, red_img)
+
+        blue_dict[square] = blue
+        red_dict[square] = red
+
+
+def find_wells_with_cells(blue_dict, red_dict):
+
+    blues_dict = dict()
+    reds_dict = dict()
+
+    for key in blue_dict.keys():
+        blue = blue_dict[key].sum().sum()
+        red = red_dict[key].sum().sum()
+
+        blues_dict[key] = blue
+        reds_dict[key] = red
+
+    blues = list(blues_dict.values())
+    reds = list(reds_dict.values())
+    blue_cutoff = np.mean(blues) + (0.6*np.std(blues))
+    red_cutoff = np.mean(reds) + (0.6*np.std(reds))
+
+    wells_with_cells = []
+
+    for key in blue_dict.keys():
+        if (blues_dict[key] > blue_cutoff) & (reds_dict[key] > red_cutoff):
+            wells_with_cells.append(key)
+
+    return wells_with_cells
+
+
+def process_all_files(bright_imgs, array_type, save_dir=None):
     """
-    final_squares, img, grey, red_img, blue_img = master_one_img_gridscan(filename, array_type)
-    df = reassign_squares_on_barcode(final_squares, filename)
-    squares = rename_dict_with_wellid(final_squares, df)
-    return squares, img, grey, red_img, blue_img
+    Processes all files that come off the CellRaft Air. Currently only supported for 100um arrays.
+    Requires that all files are in the same folder and have the extension R.tiff, B.tiff, F.tiff
+    :param bright_imgs: List of all brightfield images. Get with:
+                        glob.glob(directory+"*F.tiff")
+    :param array_type: "Air_100" is the only one currently supported
+    :param save_dir: directory to save result images. Default is to make a new folder inside
+                     the directory for the Air images called candidate_wells
+    :return: Segments images and keeps wells with cells. Individual red and blue images are
+             saved in the location specified by save_dir
+    """
+    if save_dir is None:
+
+        save_dir = os.path.dirname(bright_imgs[0])+"/candidate_wells/"
+
+    if os.path.isdir(save_dir):
+        print("save_dir exists. Create a new folder for this run")
+
+    command = "mkdir {}".format(save_dir)
+    os.system(command)
+
+    blue_dict = dict()
+    red_dict = dict()
+
+    for image in bright_imgs:
+        named_squares, img, grey, red_img, blue_img, df = master_one_img_gridscan(image,
+                                                                                  array_type = array_type)
+
+        extract_info_from_named_squares(named_squares, red_img, blue_img,
+                                        blue_dict, red_dict, array_type)
+
+    wells_with_cells = find_wells_with_cells(blue_dict, red_dict)
+
+    blue_to_save = gen.make_new_dict_of_squares(blue_dict, wells_with_cells)
+    red_to_save = gen.make_new_dict_of_squares(red_dict, wells_with_cells)
+
+    for square in blue_to_save.keys():
+        cv.imwrite(save_dir+square+"blue.tiff", blue_to_save[square])
+        cv.imwrite(save_dir+square+"red.tiff", red_to_save[square])
+

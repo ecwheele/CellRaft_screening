@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import general as gen
 import cv2 as cv
 from matplotlib import pyplot as plt
 import os
@@ -27,31 +28,6 @@ def quantify_intensity_per_well(intensity_dict, cutoff=0):
     return all, wells_with_cells
 
 
-def expand_square(square, expansion_distance):
-    """
-    Expand a square to make sure we don't miss any edges
-    :param square: array with square coordinates (from find_squares)
-    :param expansion_distance: number of pixels to expand the square in all directions
-    :return: numpy array of new square with coordinates
-    """
-    x1, y1, x2, y2, x3, y3, x4, y4 = gdt.get_x_and_y_coords_for_a_square(square)
-
-    min_x = min(x1, x2, x3, x4)
-    max_x = max(x1, x2, x3, x4)
-    min_y = min(y1, y2, y3, y4)
-    max_y = max(y1, y2, y3, y4)
-
-    min_x_new = min_x-expansion_distance
-    max_x_new = max_x+expansion_distance
-
-    min_y_new = min_y-expansion_distance
-    max_y_new = max_y+expansion_distance
-
-    new_square = np.array([[min_x_new, min_y_new],
-                           [min_x_new, max_y_new],
-                           [max_x_new, max_y_new],
-                           [max_x_new, min_y_new]])
-    return new_square
 
 
 def view_img(img_name):
@@ -121,22 +97,6 @@ def fill_missing_xmin_ymin(df_sorted):
     new = df_sorted.append(pd.DataFrame(new_rows, columns = df_sorted.columns))
     new = new.sort_values(by=['x_groups','y_groups'])
     return new
-
-
-def make_square(min_x, min_y, x_length, y_length):
-    """
-    format a square properly
-    :param min_x: min_x coord
-    :param min_y: min_y coord
-    :param x_length: x_length of square
-    :param y_length: y_length of square
-    :return: numpy array of the square
-    """
-    square = np.array([[min_x, min_y],
-             [min_x, min_y + y_length],
-             [min_x + x_length, min_y + y_length],
-             [min_x + x_length, min_y]])
-    return square
 
 
 def fill_empty_squares_in_array(squares):
