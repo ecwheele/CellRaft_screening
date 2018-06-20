@@ -8,6 +8,21 @@ from scipy import stats
 
 import detect_grids_on_array as gdt
 
+directory_dict = {'1':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_1/candidate_wells/',
+                  '2':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_2/candidate_wells/',
+                  '3':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_3/candidate_wells/',
+                  '4':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_4/candidate_wells/',
+                  '5':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_5/candidate_wells/',
+                  '6':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_6/candidate_wells/',
+                  '7':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_7/candidate_wells/',
+                  '8':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_8/candidate_wells/',
+                  '9':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_9/candidate_wells/',
+                  '10':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_10/candidate_wells/',
+                  '11':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_11/candidate_wells/',
+                  '12':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_12/candidate_wells/'}
+
+                  
+
 
 def quantify_intensity_per_well(intensity_dict, cutoff=0):
     """
@@ -30,12 +45,15 @@ def quantify_intensity_per_well(intensity_dict, cutoff=0):
 
 
 
-def view_img(img_name):
+def view_img(well_id, array_num):
     """
     Given a individual square file that exists, show the images
     :param img_name:
     :return:
     """
+    
+    img_name = directory_dict[str(array_num)]+str(well_id)
+    
     red = cv.imread(img_name+"red.tiff")
     blue = cv.imread(img_name+"blue.tiff")
     print(os.path.basename(img_name))
