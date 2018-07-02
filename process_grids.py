@@ -19,10 +19,11 @@ directory_dict = {'1':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/2018051
                   '9':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_9/candidate_wells/',
                   '10':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_10/candidate_wells/',
                   '11':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_11/candidate_wells/',
-                  '12':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_12/candidate_wells/'}
+                  '12':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_12/candidate_wells/',
+                  'key_4':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180601_keyence_raft4full/candidate_wells_uncompressed/',
+                  '4_zoom2offset75':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180612_raft4_zoom2_offset75/candidate_wells/'}
 
-                  
-
+                 
 
 def quantify_intensity_per_well(intensity_dict, cutoff=0):
     """
@@ -54,13 +55,18 @@ def view_img(well_id, array_num):
     
     img_name = directory_dict[str(array_num)]+str(well_id)
     
-    red = cv.imread(img_name+"red.tiff")
-    blue = cv.imread(img_name+"blue.tiff")
-    print(os.path.basename(img_name))
-    plt.imshow(blue)
-    plt.show()
-    plt.imshow(red)
-    plt.show()
+    if os.path.isfile(img_name+"red.tiff"):
+           
+        red = cv.imread(img_name+"red.tiff")
+        blue = cv.imread(img_name+"blue.tiff")
+        print(os.path.basename(img_name))
+        plt.imshow(blue)
+        plt.show()
+        plt.imshow(red)
+        plt.show()
+        
+    else:
+        print(str(well_id)+"_"+str(array_num)+" does not exist")
 
 
 def get_y_step(subset_df):
