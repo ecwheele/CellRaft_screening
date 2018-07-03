@@ -8,9 +8,9 @@ from scipy import stats
 
 import detect_grids_on_array as gdt
 
-directory_dict = {'1':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_1/candidate_wells/',
-                  '2':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_2/candidate_wells/',
-                  '3':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_3/candidate_wells/',
+directory_dict = {'1':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180622_fullscan_1/candidate_wells/',
+                  '2':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180622_fullscan_2/candidate_wells/',
+                  '3':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180621_fullscan_3/candidate_wells/',
                   '4':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180514/fullscan_4/candidate_wells/',
                   '5':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_5/candidate_wells/',
                   '6':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180615_fullscan_6/candidate_wells/',
