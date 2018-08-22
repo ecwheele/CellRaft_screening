@@ -6,6 +6,7 @@ import find_squares
 import cv2 as cv
 from matplotlib import pyplot as plt
 import os
+from typing import Any
 
 
 def load_and_convert_image_to_gray(filename):
@@ -86,11 +87,11 @@ def make_df_with_minx_miny(squares_dict):
 def make_uniform_squares(df, array_type):
     if array_type == "Air_100":
         x_length = 180
-        y_length = 180
+        y_length = 180  
 
     if array_type == "custom_100_20x":
-	x_length = 310
-	y_length = 310
+        x_length = 310
+        y_length = 310
 
     else:
         print("Array type not supported")
