@@ -58,6 +58,10 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
         max_length_filter = 118
         min_length_filter = 80
 
+    elif array_type == "custom_100_20x":
+        max_length_filter = 350
+        min_length_filter = 280
+
     elif array_type is None:
         max_length_filter = max_length_filter
         min_length_filter = min_length_filter
@@ -87,7 +91,7 @@ def make_df_with_minx_miny(squares_dict):
 def make_uniform_squares(df, array_type):
     if array_type == "Air_100":
         x_length = 180
-        y_length = 180  
+        y_length = 180
 
     if array_type == "custom_100_20x":
         x_length = 310
