@@ -28,8 +28,8 @@ def find_squares(img):
                 bin = cv.Canny(slice1, 0, 50, apertureSize=7)
                 bin = cv.dilate(bin, None)
             else:
-                _retval, bin = cv.threshold(gray, thrs, 255, cv.THRESH_BINARY)
-            bin, contours, _hierarchy = cv.findContours(slice1, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+                _retval, bin = cv.threshold(slice1, thrs, 255, cv.THRESH_BINARY)
+            bin, contours, _hierarchy = cv.findContours(bin, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
             for cnt in contours:
                 cnt_len = cv.arcLength(cnt, True)
                 cnt = cv.approxPolyDP(cnt, 0.1*cnt_len, True)
