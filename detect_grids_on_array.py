@@ -9,14 +9,13 @@ import os
 from typing import Any
 
 
-def load_and_convert_image_to_gray(filename):
+def load_image(filename):
     """
     :param filename: Fill path to image file to load
-    :return: img file RGB (3D array), and grayscale image (2D array)
+    :return: img file
     """
-    img = cv.imread(filename)
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    return img, gray
+    img = cv.imread(filename, cv.IMREAD_ANYDEPTH)
+    return img
 
 
 def get_side_lengths_of_all_squares(array_of_square_coords):
@@ -248,7 +247,7 @@ def master_one_img_gridscan(filename, array_type=None, max_length_filter=None,
 
     :param filename:name of inputfile from CellRaftAir
     :param array_type:Air_100 or Air_200
-    :return: final_squares, img, grey, red_img, blue_img
+    :return: final_squares, img, red_img, blue_img
     """
 
     # if array_type == "Air_100":
@@ -258,7 +257,7 @@ def master_one_img_gridscan(filename, array_type=None, max_length_filter=None,
     # if array_type == "keyence_10x":
     #     distance_filt = 20
 
-    img, grey = load_and_convert_image_to_gray(filename)
+    img = load_and_convert_image_to_gray(filename)
     squares = find_squares.find_squares(img)
     lengths = get_side_lengths_of_all_squares(squares)
     new_squares = filter_squares_on_side_length(lengths, squares, array_type=array_type,  
@@ -270,10 +269,10 @@ def master_one_img_gridscan(filename, array_type=None, max_length_filter=None,
     assigned = assign_well_id(df, filename)
     named_squares = rename_dict_with_wellid(final_squares, assigned)
 
-    red_img, red_gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "R.tiff"))
-    blue_img, blue_gray = load_and_convert_image_to_gray(filename.replace("F.tiff", "B.tiff"))
+    red_img = load_image(filename.replace("F.tiff", "R.tiff"))
+    blue_img = load_image(filename.replace("F.tiff", "B.tiff"))
 
-    return named_squares, img, grey, red_img, blue_img, df
+    return named_squares, img, red_img, blue_img, df
 
 
 def extract_info_from_named_squares(named_squares, red_img, blue_img,
@@ -354,8 +353,8 @@ def process_all_files(bright_imgs, array_type, save_dir=None):
     red_dict = dict()
 
     for image in bright_imgs:
-        named_squares, img, grey, red_img, blue_img, df = master_one_img_gridscan(image,
-                                                                                  array_type = array_type)
+        named_squares, img, red_img, blue_img, df = master_one_img_gridscan(image,
+                                                                            array_type = array_type)
 
         extract_info_from_named_squares(named_squares, red_img, blue_img,
                                         blue_dict, red_dict, array_type)
