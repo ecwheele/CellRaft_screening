@@ -57,9 +57,13 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
         max_length_filter = 118
         min_length_filter = 80
 
-    elif array_type == "custom_100_20x":
+    elif array_type == "custom_100_20x_widefield":
         max_length_filter = 350
         min_length_filter = 280
+
+    elif array_type == "custom_100_20x_confocal":
+        max_length_filter = 100
+        min_length_filter = 50
 
     elif array_type is None:
         max_length_filter = max_length_filter
@@ -92,9 +96,13 @@ def make_uniform_squares(df, array_type):
         x_length = 180
         y_length = 180
 
-    if array_type == "custom_100_20x":
+    if array_type == "custom_100_20x_widefield":
         x_length = 310
         y_length = 310
+
+    if array_type == "custom_100_20x_confocal":
+        x_length = 60
+        y_length = 60
 
     else:
         print("Array type not supported")
