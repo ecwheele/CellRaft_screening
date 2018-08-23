@@ -16,9 +16,16 @@ def find_squares(img):
     img = cv.GaussianBlur(img, (7, 7), 0)
     squares = []
     for gray in cv.split(img):
+        if img.dtype == 'uint16':
+            slice1 = np.uint8(gray)
+        elif img.dtype == 'uint8':
+            slice1 = img
+        else:
+            print('not 8 or 16 bit image')
+            break
         for thrs in xrange(0, 255, 26):
             if thrs == 0:
-                bin = cv.Canny(gray, 0, 50, apertureSize=7)
+                bin = cv.Canny(slice1, 0, 50, apertureSize=7)
                 bin = cv.dilate(bin, None)
             else:
                 _retval, bin = cv.threshold(gray, thrs, 255, cv.THRESH_BINARY)
