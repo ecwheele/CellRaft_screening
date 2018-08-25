@@ -65,6 +65,10 @@ def filter_squares_on_side_length(lengths_dict, squares, array_type=None,
         max_length_filter = 100
         min_length_filter = 70
 
+    elif array_type == "cytosort_100_20x_confocal":
+        max_length_filter = 90
+        min_length_filter = 60
+
     elif array_type is None:
         max_length_filter = max_length_filter
         min_length_filter = min_length_filter
@@ -101,6 +105,10 @@ def make_uniform_squares(df, array_type):
         y_length = 310
 
     if array_type == "custom_100_20x_confocal":
+        x_length = 85
+        y_length = 85
+
+    elif array_type == "cytosort_100_20x_confocal":
         x_length = 85
         y_length = 85
 
