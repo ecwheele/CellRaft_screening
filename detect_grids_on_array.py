@@ -100,11 +100,11 @@ def make_uniform_squares(df, array_type):
         x_length = 180
         y_length = 180
 
-    if array_type == "custom_100_20x_widefield":
+    elif array_type == "custom_100_20x_widefield":
         x_length = 310
         y_length = 310
 
-    if array_type == "custom_100_20x_confocal":
+    elif array_type == "custom_100_20x_confocal":
         x_length = 85
         y_length = 85
 
