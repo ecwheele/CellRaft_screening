@@ -45,10 +45,12 @@ def calculate_ratio(image, input_square, percent_to_crop):
 def get_expected_signal(image, percent_to_crop):
     """
     Calculated expected amount of signal based on amount of image cropped
-    :param image: image loaded with opencv
+    :param image: filepath of full image
     :param percent_to_crop: amount of edge removed in decimal form (0.2 for 20%)
     :return: expected pixel intensity based on area removed
     """
+
+    image = gdt.load_image(image)
     expected = ((image.shape[0]*(1-percent_to_crop))**2)/(image.shape[0]**2)
     return expected
 
