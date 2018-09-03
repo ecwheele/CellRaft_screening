@@ -68,24 +68,12 @@ def calculate_all_ratios(all_imgs, percent_to_crop):
         name = os.path.basename(img_file)
         image = gdt.load_image(img_file)
         input_square = make_square_coords(image)
-        to_expand = int(image.shape[0]*percent_to_crop)
 
-        ratio, smaller = calculate_ratio(image, input_square, to_expand)
+        ratio, smaller = calculate_ratio(image, input_square, percent_to_crop)
 
         all_ratios_dict[name] = ratio
 
     return all_ratios_dict
-
-
-def get_expected_signal(image, percent_to_crop):
-    """
-    Calculate expected intensity based on decrease in area
-    :param image: image (loaded with opencv)
-    :param percent_to_crop: percent to crop in decimal form
-    :return: expected ratio
-    """
-    expected = ((image.shape[0]*(1-percent_to_crop))**2)/(image.shape[0]**2)
-    return expected
 
 
 def get_cutoffs(all_ratios_dict):
