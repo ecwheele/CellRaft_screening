@@ -21,7 +21,8 @@ directory_dict = {'1':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/2018062
                   '11':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_11/candidate_wells/',
                   '12':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180619_fullscan_12/candidate_wells/',
                   'key_4':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180601_keyence_raft4full/candidate_wells_uncompressed/',
-                  '4_zoom2offset75':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180612_raft4_zoom2_offset75/candidate_wells/'}
+                  '4_zoom2offset75':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180612_raft4_zoom2_offset75/candidate_wells/',
+                  'spin_test':'/projects/ps-yeolab3/ecwheele/images/cellraft_Air/20180911_pdl_spin_test/candidate_wells/'}
 
                  
 
