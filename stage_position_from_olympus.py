@@ -35,7 +35,7 @@ def get_image_name_and_steps(matl_file):
     """
 
     :param matl_file: full path to output from olympus run (matl.omp2info)
-    :return: dataframe with x and y step listed for each file
+    :return: dataframe with x and y step listed for each file (+1 to remove 0-based indexing)
     """
 
     rows = []
@@ -45,11 +45,11 @@ def get_image_name_and_steps(matl_file):
             if 'matl:image' in line:
                 filename = re.search('<matl:image>(.*)</matl:image>', line).group(1)
                 nextline = next(file)
-                x_step = re.search('<matl:xIndex>(.*)</matl:xIndex>', nextline).group(1)
+                x_step = int(re.search('<matl:xIndex>(.*)</matl:xIndex>', nextline).group(1))+1
                 nextline = next(file)
-                y_step = re.search('<matl:yIndex>(.*)</matl:yIndex>', nextline).group(1)
+                y_step = int(re.search('<matl:yIndex>(.*)</matl:yIndex>', nextline).group(1))+1
 
-                row = [filename, x_step, y_step]
+                row = [filename, str(x_step), str(y_step)]
 
                 rows.append(row)
 
@@ -60,49 +60,40 @@ def get_image_name_and_steps(matl_file):
     return all_steps
 
 
-def get_absoltue_coords_per_image(params_dict, steps_df):
+def calculate_position(step_number, overlap, image_size=2048, resolution_factor=0.6125):
     """
 
-    :param params_dict: output of get_setup_parameters
-    :param steps_df: output of get_image_name_and_steps
-    :return: df with absolute x and y position per image
+    :param step_number: 1-based step (x or y)
+    :param resolution_factor: of images (default is 0.6125)
+    :param overlap: percent overlap (whole number)
+    :param image_size: resolution of image
+    :return: absolute position given a step
     """
 
-    new_coords = []
+    offset_fraction = (100 - overlap/2)/100
 
-    for row in steps_df.iterrows():
-        name = row[0]
-        x_new = (params_dict['x_origin'] +
-                 (int(row[1]['x_step'])*params_dict['x_step']) -
-                 (int(row[1]['x_step'])*params_dict['overlap']))
+    micron_step = image_size*offset_fraction*resolution_factor
 
-        y_new = (params_dict['y_origin'] +
-             (int(row[1]['y_step'])*params_dict['y_step']) -
-             (int(row[1]['y_step'])*params_dict['overlap']))
+    absolute_pos = float(step_number)*float(micron_step)
 
-        new_coords.append([name, x_new, y_new])
-
-    new = pd.DataFrame(new_coords)
-    new.columns = ['filename','absolute_x','absolute_y']
-    new.set_index('filename', inplace=True)
-
-    file_coords = steps_df.join(new)
-
-    return file_coords
+    return absolute_pos
 
 
-def master(matl_file, filename_to_save=None):
+def master(matl_file, filename_to_save=None, image_size=2048, resolution_factor=0.6125):
     """
 
     :param matl_file: full path to output from olympus run (matl.omp2info)
     :param filename_to_save: location to save resulting dataframe as csv
+    :param image_size: default is 2048
+    :param resolution_factor: default is 0.6125
     :return:
     """
     params_dict = get_setup_parameters(matl_file)
     all_steps = get_image_name_and_steps(matl_file)
-    final_df = get_absoltue_coords_per_image(params_dict, all_steps)
+    all_steps['x_absolute'] = all_steps['x_step'].apply(lambda x: calculate_position(x, params_dict['overlap'], image_size=image_size, resolution_factor=resolution_factor))
+    all_steps['y_absolute'] = all_steps['y_step'].apply(lambda x: calculate_position(x, params_dict['overlap'], image_size=image_size, resolution_factor=resolution_factor))
 
     if filename_to_save is not None:
-        final_df.to_csv(filename_to_save)
+        all_steps.to_csv(filename_to_save)
 
-    return final_df
+    return all_steps
