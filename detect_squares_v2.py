@@ -317,7 +317,7 @@ def process_all(data_dir, array_type, save_dir, bf_suffix='*2.tif', blur=False, 
     """
 
     bf_imgs = glob.glob(data_dir+bf_suffix)
-    red_dict, blue_dict = get_dict_of_all_squares(bf_imgs, array_type, blur, char_to_split_name)
+    red_dict, blue_dict = get_dict_of_all_squares(bf_imgs=bf_imgs, array_type=array_type, blur=blur, char_to_split_name=char_to_split_name)
     wells_with_cells = find_wells_with_cells(blue_dict, red_dict)
 
     blue_to_save = gen.make_new_dict_of_squares(blue_dict, wells_with_cells)
