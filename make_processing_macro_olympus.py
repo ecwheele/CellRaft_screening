@@ -14,19 +14,19 @@ def get_file_list(num_files):
     return file_list
 
 
-def make_macro_3_channels(data_dir, save_dir, file_name_prefix, file_nums, macro_file):
+def make_macro_3_channels(data_dir, save_dir, file_name_prefix, file_nums, macro_save_dir):
     """
 
-    :param data_dir: directory with .oir file
+    :param data_dir: directory with .oir files
     :param save_dir: directory where .tif files will be saved
     :param file_name_prefix: common component of name of .oir files from experiment
            ex: "8-10-2018 exp 2 attempt 1 phase 1_A01_G001_"
     :param file_nums: output of get_file_list
-    :param macro_file: full path of location for macro to run
+    :param macro_save_dir: full path of location for macro to save
     :return: saves a macro file
     """
 
-    file_object = open(macro_file, "w")
+    file_object = open(macro_save_dir+"oir_macro.txt", "w")
 
     inp = 'input="{}";'.format(data_dir)
 
