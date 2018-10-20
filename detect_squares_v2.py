@@ -6,6 +6,7 @@ import find_squares
 import cv2 as cv
 import os
 import glob
+from tqdm import trange
 
 
 # Define square lengths for different arrays. List is [max_length, min_length, uniform_length]
@@ -15,7 +16,8 @@ side_lengths_dict = {"Air_100": [200, 150, 180],
                      "custom_100_20x_widefield": [350, 280, 310],
                      "custom_100_20x_confocal": [100, 70, 85],
                      "cytosort_100_20x_confocal": [90, 60, 85],
-                     "custom_100_old_10x_confocal": [220, 140, 170]}
+                     "custom_100_old_10x_confocal": [220, 140, 170],
+                     "custom_100_10x_confocal": [200, 140, 170]}
 
 
 def load_image(filename):
@@ -283,6 +285,8 @@ def get_dict_of_all_squares(bf_imgs, array_type, blur=False, char_to_split_name=
     red_dict = dict()
     blue_dict = dict()
 
+    progress = trange(len(bf_imgs))
+
     for image in bf_imgs:
         name = os.path.basename(image).split(char_to_split_name)[0]
         final_squares, img, red_img, blue_img, df = master_one_img_gridscan(image,
@@ -299,6 +303,8 @@ def get_dict_of_all_squares(bf_imgs, array_type, blur=False, char_to_split_name=
             blue_dict[name+"-"+str(number)] = blue
 
             number += 1
+
+        progress.update(1)
 
     return red_dict, blue_dict
 
