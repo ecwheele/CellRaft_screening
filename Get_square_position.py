@@ -45,17 +45,21 @@ def check_correct_square(final_squares, hit_filename, red_img, blue_img):
         num += 1
 
 
-def get_absolute_center(hit_filename, metadata_info, coords):
+def get_absolute_center(hit_filename, metadata_info, coords, resolution_factor=0.6215):
     """
-
+    ****Need to convert this into microns
     :param hit_filename:
     :param metadata_info:
     :param coords:
+    :param resolution_factor: to convert to microns
     :return:
     """
 
     x_center = (min(coords[0]) + max(coords[0]))/2
     y_center = (min(coords[1]) + max(coords[1]))/2
+
+    x_center_micron = x_center*resolution_factor
+    y_center_micron = y_center*resolution_factor
 
     lookup = (hit_filename.split('-')[0]+".oir").strip("MAX_")
 
@@ -65,7 +69,7 @@ def get_absolute_center(hit_filename, metadata_info, coords):
     x_step = int(metadata_info.loc[lookup]['x_step'])
     y_step = int(metadata_info.loc[lookup]['y_step'])
 
-    row = [hit_filename, x_center+absolute_x, y_center+absolute_y, x_step, y_step]
+    row = [hit_filename, x_center_micron+absolute_x, y_center_micron+absolute_y, x_step, y_step]
     return row
 
 
