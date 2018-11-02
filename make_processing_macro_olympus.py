@@ -26,7 +26,7 @@ def make_macro_3_channels(data_dir, save_dir, file_name_prefix, file_nums, macro
     :return: saves a macro file
     """
 
-    file_object = open(macro_save_dir+"oir_macro.txt", "w")
+    file_object = open(macro_save_dir+"oir_macro.ijm", "w")
 
     inp = 'input="{}";'.format(data_dir)
 

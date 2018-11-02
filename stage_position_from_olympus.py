@@ -60,7 +60,7 @@ def get_image_name_and_steps(matl_file):
     return all_steps
 
 
-def calculate_position(step_number, overlap, image_size=2048, resolution_factor=0.6125):
+def calculate_position(step_number, overlap, image_size=2048, resolution_factor=0.6215):
     """
 
     :param step_number: 1-based step (x or y)
@@ -79,7 +79,7 @@ def calculate_position(step_number, overlap, image_size=2048, resolution_factor=
     return absolute_pos
 
 
-def master(matl_file, filename_to_save=None, image_size=2048, resolution_factor=0.6125):
+def master(matl_file, filename_to_save=None, image_size=2048, resolution_factor=0.6215):
     """
 
     :param matl_file: full path to output from olympus run (matl.omp2info)
